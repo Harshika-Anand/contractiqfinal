@@ -128,7 +128,12 @@ app.config['SESSION_USE_SIGNER'] = True    # Sign session cookies for security
 #
 # SECURITY NOTE: In production, restrict origins to your frontend domain only
 # Example: origins=["https://yourdomain.com", "https://www.yourdomain.com"]
-CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
+CORS(app, supports_credentials=True, origins=[
+    "http://localhost:3000", 
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:5173"
+])
 
 
 # =============================================================================
