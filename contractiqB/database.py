@@ -589,13 +589,26 @@ def get_dashboard_stats(user_id):
         )
         stats['total_documents'] = cursor.fetchone()['count']
         
-        # Count documents with extracted clauses
+       # Count TOTAL clauses across all documents
         cursor = conn.execute(
-            'SELECT COUNT(*) as count FROM documents WHERE user_id = ? AND clauses IS NOT NULL',
+            'SELECT clauses FROM documents WHERE user_id = ? AND clauses IS NOT NULL',
             (user_id,)
         )
-        stats['total_clauses_extracted'] = cursor.fetchone()['count']
-        
+
+        total_clauses = 0
+        for row in cursor.fetchall():
+            if row['clauses']:
+                try:
+                    clauses_dict = json.loads(row['clauses'])
+                    for category, clause_list in clauses_dict.items():
+                        if isinstance(clause_list, list):
+                            total_clauses += len(clause_list)
+                except json.JSONDecodeError:
+                    pass
+
+        stats['total_clauses_extracted'] = total_clauses
+
+        stats['total_clauses_extracted'] = total_clauses
         # Get 5 most recent documents (just basic info, not full text)
         cursor = conn.execute('''
             SELECT id, original_filename, upload_date 
