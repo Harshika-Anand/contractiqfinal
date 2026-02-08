@@ -1,0 +1,16 @@
+# Python dependencies for ContractIQ Backend
+
+# Web framework
+Flask==3.0.0
+
+# CORS support for frontend integration
+Flask-CORS==4.0.0
+
+# PDF text extraction
+PyPDF2==3.0.1
+
+# Security utilities (password hashing, secure filenames)
+Werkzeug==3.0.1
+
+# JWT authentication for access tokens
+PyJWT==2.8.0
