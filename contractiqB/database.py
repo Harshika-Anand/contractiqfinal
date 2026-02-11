@@ -342,7 +342,7 @@ def save_document(user_id, filename, original_filename, file_path, extracted_tex
         original_filename (str): Original name of the uploaded file
         file_path (str): Full filesystem path where the PDF is stored
         extracted_text (str, optional): Text content extracted from the PDF
-        clauses (dict/list, optional): Identified clauses (will be JSON-serialized)
+        clauses (dict/str, optional): Identified clauses as dict or JSON string
     
     Returns:
         int: The ID of the saved document, or None if save failed
@@ -361,9 +361,26 @@ def save_document(user_id, filename, original_filename, file_path, extracted_tex
     cursor = conn.cursor()
     
     try:
-        # Convert clauses dict/list to JSON string for storage
-        # SQLite doesn't have a native JSON type, so we store as TEXT
-        clauses_json = json.dumps(clauses) if clauses else None
+        # Convert clauses to JSON string if it's a dict
+        # Handle double-encoding by detecting and fixing it
+        if isinstance(clauses, dict):
+            clauses_json = json.dumps(clauses)
+        elif isinstance(clauses, str):
+            # Check if it's already JSON-encoded
+            try:
+                # Try to parse it - if it succeeds, check if the result is also a string
+                parsed = json.loads(clauses)
+                if isinstance(parsed, str):
+                    # It was double-encoded! Parse again and re-encode once
+                    clauses_json = clauses  # Use the original since parsing twice would give us the dict
+                else:
+                    # It's properly encoded
+                    clauses_json = clauses
+            except json.JSONDecodeError:
+                # Not valid JSON, just use as-is
+                clauses_json = clauses
+        else:
+            clauses_json = None
         
         cursor.execute('''
             INSERT INTO documents (user_id, filename, original_filename, file_path, extracted_text, clauses)
@@ -591,24 +608,50 @@ def get_dashboard_stats(user_id):
         
        # Count TOTAL clauses across all documents
         cursor = conn.execute(
-            'SELECT clauses FROM documents WHERE user_id = ? AND clauses IS NOT NULL',
+            'SELECT id, filename, clauses FROM documents WHERE user_id = ?',
             (user_id,)
         )
+        
+        all_rows = cursor.fetchall()
+        print(f"→ Dashboard: Found {len(all_rows)} total documents for user {user_id}")
 
         total_clauses = 0
-        for row in cursor.fetchall():
-            if row['clauses']:
+        for row in all_rows:
+            clauses_data = row['clauses']
+            doc_id = row['id']
+            doc_filename = row['filename']
+            
+            if clauses_data:
                 try:
-                    clauses_dict = json.loads(row['clauses'])
-                    for category, clause_list in clauses_dict.items():
-                        if isinstance(clause_list, list):
-                            total_clauses += len(clause_list)
-                except json.JSONDecodeError:
-                    pass
+                    # Parse JSON - handle double-encoding
+                    clauses_dict = clauses_data
+                    
+                    # First parse
+                    if isinstance(clauses_dict, str):
+                        clauses_dict = json.loads(clauses_dict)
+                    
+                    # Check for double-encoding (if result is still a string after parsing)
+                    if isinstance(clauses_dict, str):
+                        print(f"  Doc {doc_id}: Detected double-encoding, parsing again...")
+                        clauses_dict = json.loads(clauses_dict)
+                    
+                    # Count clauses in each category
+                    if isinstance(clauses_dict, dict):
+                        doc_clause_count = 0
+                        for category, clause_list in clauses_dict.items():
+                            if isinstance(clause_list, list):
+                                doc_clause_count += len(clause_list)
+                        total_clauses += doc_clause_count
+                        if doc_clause_count > 0:
+                            print(f"  ✓ Doc {doc_id}: {doc_clause_count} clauses")
+                except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                    print(f"  ✗ Doc {doc_id}: Parse error - {e}")
+                    continue
+            else:
+                print(f"  Doc {doc_id}: No clauses")
 
         stats['total_clauses_extracted'] = total_clauses
-
-        stats['total_clauses_extracted'] = total_clauses
+        print(f"→ Dashboard: Total clauses: {total_clauses}")
         # Get 5 most recent documents (just basic info, not full text)
         cursor = conn.execute('''
             SELECT id, original_filename, upload_date 

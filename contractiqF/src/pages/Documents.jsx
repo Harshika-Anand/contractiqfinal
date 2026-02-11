@@ -7,6 +7,10 @@ const Documents = () => {
   const { documents, loading, uploadDocument, deleteDocument } = useDocuments();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'text'
+  const [textInput, setTextInput] = useState('');
+  const [documentName, setDocumentName] = useState('');
+  const [extracting, setExtracting] = useState(false);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -39,6 +43,53 @@ const Documents = () => {
     }
   };
 
+  const handleTextExtraction = async (e) => {
+    e.preventDefault();
+
+    if (!textInput.trim()) {
+      toast.error('Please paste some text to analyze');
+      return;
+    }
+
+    if (textInput.trim().length < 50) {
+      toast.error('Text must be at least 50 characters long');
+      return;
+    }
+
+    setExtracting(true);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/extract-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          text: textInput,
+          document_name: documentName || 'Text Submission',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Clauses extracted successfully!');
+        setTextInput('');
+        setDocumentName('');
+        // Refresh documents list
+        window.location.reload();
+      } else {
+        toast.error(data.error || 'Failed to extract clauses');
+      }
+    } catch (error) {
+      toast.error('An error occurred. Please try again.');
+      console.error('Error:', error);
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   const handleDelete = async (id, filename) => {
     if (window.confirm(`Are you sure you want to delete "${filename}"?`)) {
       await deleteDocument(id);
@@ -58,43 +109,136 @@ const Documents = () => {
       <div className="container mx-auto px-4">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Documents</h1>
-          <p className="text-gray-600 mt-1">Upload and manage your contract documents</p>
+          <p className="text-gray-600 mt-1">Upload PDFs or paste text to extract contract clauses</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-100 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Upload New Document</h2>
-          
-          <label className="block">
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              className="block w-full text-sm text-gray-500
-                file:mr-4 file:py-3 file:px-6
-                file:rounded-lg file:border-0
-                file:text-sm file:font-semibold
-                file:bg-indigo-50 file:text-indigo-700
-                hover:file:bg-indigo-100
-                file:cursor-pointer cursor-pointer
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-          </label>
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('upload')}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+                activeTab === 'upload'
+                  ? 'border-b-2 border-indigo-600 text-indigo-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload PDF
+            </button>
+            <button
+              onClick={() => setActiveTab('text')}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+                activeTab === 'text'
+                  ? 'border-b-2 border-indigo-600 text-indigo-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Paste Text
+            </button>
+          </div>
 
-          {uploading && (
-            <div className="mt-4">
-              <div className="flex justify-between mb-1">
-                <span className="text-sm font-medium text-indigo-700">Uploading...</span>
-                <span className="text-sm font-medium text-indigo-700">{uploadProgress}%</span>
+          {/* Tab Content */}
+          <div className="p-8">
+            {activeTab === 'upload' ? (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Upload PDF Document</h2>
+                
+                <label className="block">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileUpload}
+                    disabled={uploading}
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-3 file:px-6
+                      file:rounded-lg file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-indigo-50 file:text-indigo-700
+                      hover:file:bg-indigo-100
+                      file:cursor-pointer cursor-pointer
+                      disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </label>
+
+                {uploading && (
+                  <div className="mt-4">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm font-medium text-indigo-700">Uploading...</span>
+                      <span className="text-sm font-medium text-indigo-700">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-indigo-600 h-2 rounded-full transition-all"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-gray-500 mt-3">
+                  PDF files up to 10MB are supported. We'll automatically extract contract clauses from your document.
+                </p>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-indigo-600 h-2 rounded-full transition-all"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+            ) : (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Paste Contract Text</h2>
+                
+                <form onSubmit={handleTextExtraction} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Document Name (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={documentName}
+                      onChange={(e) => setDocumentName(e.target.value)}
+                      placeholder="e.g., Service Agreement v2.1"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contract Text <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      placeholder="Paste contract text here... (minimum 50 characters)"
+                      rows="10"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      {textInput.length} characters • Minimum 50 characters required
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={extracting || textInput.trim().length < 50}
+                    className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {extracting ? 'Extracting Clauses...' : 'Extract Clauses'}
+                  </button>
+                </form>
+
+                <p className="text-sm text-gray-500 mt-4">
+                  Paste contract text directly and we'll analyze it for clauses. No file upload needed.
+                </p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Documents List */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Your Documents</h2>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -140,8 +284,8 @@ const Documents = () => {
             ))
           ) : (
             <div className="col-span-full text-center py-12">
-              <p className="text-gray-500 mb-4">No documents uploaded yet</p>
-              <p className="text-gray-400">Upload your first PDF contract to get started</p>
+              <p className="text-gray-500 mb-4">No documents yet</p>
+              <p className="text-gray-400">Upload a PDF or paste text to extract contract clauses</p>
             </div>
           )}
         </div>

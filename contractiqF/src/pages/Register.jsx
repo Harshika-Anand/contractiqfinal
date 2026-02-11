@@ -3,6 +3,22 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
+// Password validation function
+const validatePassword = (password) => {
+  if (!password) return { valid: false, errors: ['Password is required'] };
+  
+  const errors = [];
+  
+  if (password.length < 8) errors.push('At least 8 characters');
+  if (!/[A-Z]/.test(password)) errors.push('One uppercase letter (A-Z)');
+  if (!/[a-z]/.test(password)) errors.push('One lowercase letter (a-z)');
+  if (!/\d/.test(password)) errors.push('One number (0-9)');
+  if (!/[!@#$%^&()\-_=+[\]{}|;:'",.<>?/]/.test(password)) 
+    errors.push('One special character (!@#$%^&*)');
+  
+  return { valid: errors.length === 0, errors };
+};
+
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
@@ -15,12 +31,20 @@ const Register = () => {
     role: 'client',
   });
   const [loading, setLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    
+    // Real-time password validation
+    if (name === 'password') {
+      const validation = validatePassword(value);
+      setPasswordErrors(validation.errors);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -31,8 +55,10 @@ const Register = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    // Validate password strength
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.valid) {
+      toast.error(`Password must have: ${passwordValidation.errors.join(', ')}`);
       return;
     }
 
@@ -124,15 +150,37 @@ const Register = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Requirements: 8+ chars, uppercase, lowercase, number, special char
+              </p>
               <input
                 name="password"
                 type="password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="••••••••"
+                className={`block w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                  passwordErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                placeholder="Enter a strong password"
               />
+              {passwordErrors.length > 0 && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-xs font-medium text-red-700 mb-2">Password must include:</p>
+                  <ul className="space-y-1">
+                    {passwordErrors.map((error, idx) => (
+                      <li key={idx} className="text-xs text-red-600 flex items-center">
+                        <span className="mr-2">✗</span>{error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {formData.password && passwordErrors.length === 0 && (
+                <p className="mt-2 text-sm text-green-600 flex items-center">
+                  <span className="mr-2">✓</span>Strong password
+                </p>
+              )}
             </div>
 
             <div>
@@ -145,15 +193,29 @@ const Register = () => {
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="••••••••"
+                className={`block w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                  formData.confirmPassword && formData.password !== formData.confirmPassword
+                    ? 'border-red-300 bg-red-50'
+                    : 'border-gray-300'
+                }`}
+                placeholder="Confirm password"
               />
+              {formData.confirmPassword && formData.password === formData.confirmPassword && formData.password && (
+                <p className="mt-2 text-sm text-green-600 flex items-center">
+                  <span className="mr-2">✓</span>Passwords match
+                </p>
+              )}
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="mr-2">✗</span>Passwords do not match
+                </p>
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
+              disabled={loading || passwordErrors.length > 0}
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>

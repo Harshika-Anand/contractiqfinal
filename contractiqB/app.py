@@ -29,6 +29,7 @@ from werkzeug.utils import secure_filename
 import os                   # File system operations (paths, directories)
 from datetime import datetime, timedelta  # Timestamps for unique filenames and JWT expiration
 import uuid                 # Generate unique identifiers
+import json                 # JSON serialization for storing clauses
 
 # JWT for access token authentication
 import jwt
@@ -139,6 +140,53 @@ CORS(app, supports_credentials=True, origins=[
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
+def validate_password(password):
+    """
+    Validate password against security requirements.
+    
+    Requirements:
+    - Minimum 8 characters (changed from 6)
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - At least one special character (!@#$%^&*)\
+    
+    Args:
+        password (str): Password to validate
+    
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    if not password:
+        return False, "Password is required"
+    
+    # Minimum length check
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    
+    # Maximum length check (prevent very long passwords)
+    if len(password) > 128:
+        return False, "Password must not exceed 128 characters"
+    
+    # Check for uppercase letter
+    if not any(c.isupper() for c in password):
+        return False, "Password must contain at least one uppercase letter"
+    
+    # Check for lowercase letter
+    if not any(c.islower() for c in password):
+        return False, "Password must contain at least one lowercase letter"
+    
+    # Check for digit
+    if not any(c.isdigit() for c in password):
+        return False, "Password must contain at least one number"
+    
+    # Check for special character
+    special_chars = "!@#$%^&*()-_=+[]{}|;:',.<>?/"
+    if not any(c in special_chars for c in password):
+        return False, "Password must contain at least one special character (!@#$%^&*)"
+    
+    return True, None
 
 def allowed_file(filename):
     """
@@ -572,11 +620,12 @@ def register():
             'error': 'Please provide a valid email address'
         }), 400
     
-    # Password validation: Minimum 6 characters
-    if len(password) < 6:
+    # Password validation: Use comprehensive validation function
+    is_valid_password, error_msg = validate_password(password)
+    if not is_valid_password:
         return jsonify({
             'success': False,
-            'error': 'Password must be at least 6 characters long'
+            'error': error_msg
         }), 400
     
     # Role validation: Must be one of the allowed values
@@ -1293,6 +1342,183 @@ def upload_document():
     return jsonify(response_data), 200
 
 
+@app.route('/api/extract-text', methods=['POST'])
+def extract_text():
+    """
+    Extract clauses directly from pasted text (no file upload needed).
+    
+    This endpoint allows users to paste contract text directly and extract clauses
+    without needing to upload a PDF file. Useful for:
+    - Quick clause analysis
+    - Testing clause extraction
+    - Analyzing text from multiple sources
+    
+    Authentication:
+        Requires user to be logged in (user_id in session).
+    
+    Request Body (JSON):
+        {
+            "text": "Contract text here...",
+            "document_name": "Optional document title" (optional)
+        }
+    
+    Returns:
+        Success (200):
+            {
+                "success": true,
+                "message": "Clauses extracted successfully",
+                "document": {
+                    "id": 1,
+                    "filename": "text_submission_uuid_timestamp.txt",
+                    "original_filename": "Contract Text Submission",
+                    "upload_date": "2025-02-06 10:30:00",
+                    "clauses": {
+                        "Termination": ["clause 1", "clause 2"],
+                        "Payment": ["clause 3"],
+                        ...
+                    },
+                    "clauses_summary": {
+                        "total_clauses": 10,
+                        "categories": {...}
+                    },
+                    "text_preview": "First 500 characters of text..."
+                }
+            }
+        
+        Error (400): Bad request (no text provided)
+            {"success": false, "error": "Error description"}
+        
+        Error (401): Not authenticated
+            {"success": false, "error": "Not authenticated. Please log in."}
+        
+        Error (500): Processing error
+            {"success": false, "error": "Failed to process text"}
+    """
+    
+    # -------------------------------------------------------------------------
+    # Step 1: Verify user is authenticated
+    # -------------------------------------------------------------------------
+    user_id = get_current_user_id()
+    
+    if not user_id:
+        return jsonify({
+            'success': False,
+            'error': 'Not authenticated. Please log in or provide a valid access token.'
+        }), 401
+    
+    # -------------------------------------------------------------------------
+    # Step 2: Parse and validate request
+    # -------------------------------------------------------------------------
+    if not request.is_json:
+        return jsonify({
+            'success': False,
+            'error': 'Request must be JSON. Set Content-Type: application/json'
+        }), 400
+    
+    data = request.get_json()
+    
+    # Get the text from the request
+    text = data.get('text', '').strip()
+    document_name = data.get('document_name', 'Text Submission').strip()
+    
+    # Validate text is provided and not empty
+    if not text:
+        return jsonify({
+            'success': False,
+            'error': 'Please provide text to analyze'
+        }), 400
+    
+    # Validate text length
+    if len(text) < 50:
+        return jsonify({
+            'success': False,
+            'error': 'Text must be at least 50 characters long'
+        }), 400
+    
+    if len(text) > 1_000_000:  # 1 million characters max
+        return jsonify({
+            'success': False,
+            'error': 'Text is too long (maximum 1 million characters)'
+        }), 400
+    
+    # -------------------------------------------------------------------------
+    # Step 3: Extract and analyze clauses
+    # -------------------------------------------------------------------------
+    try:
+        # Extract clauses from the provided text
+        extracted_clauses = extract_clauses(text)
+        
+        # Generate summary of clauses
+        clauses_summary = get_clause_summary(extracted_clauses)
+        
+        # Create preview of the text
+        text_preview = text[:500] + '...' if len(text) > 500 else text
+        
+        print(f"✓ Text extraction: {clauses_summary['total_clauses']} clauses found")
+        print(f"  Extracted clauses: {extracted_clauses}")
+        
+    except Exception as e:
+        print(f"✗ Error processing text: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to process text. Please try again.'
+        }), 500
+    
+    # -------------------------------------------------------------------------
+    # Step 4: Save to database
+    # -------------------------------------------------------------------------
+    try:
+        # Generate unique filename for the text submission
+        unique_filename = f"text_{uuid.uuid4()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        
+        # Save document to database (save_document handles JSON encoding if needed)
+        # Pass the extracted_clauses dict directly - save_document will JSON-encode it
+        document_id = save_document(
+            user_id=user_id,
+            filename=unique_filename,
+            original_filename=document_name,
+            file_path='text_submission',  # Indicate this is from text input, not a file
+            extracted_text=text,
+            clauses=extracted_clauses  # Pass dict, not JSON string
+        )
+        
+        if not document_id:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save document. Please try again.'
+            }), 500
+        
+    except Exception as e:
+        print(f"✗ Error saving document: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to save document. Please try again.'
+        }), 500
+    
+    # -------------------------------------------------------------------------
+    # Step 5: Return success response
+    # -------------------------------------------------------------------------
+    print(f"✓ Clauses extracted from text ({len(text)} chars): {clauses_summary['total_clauses']} clauses found")
+    
+    response_data = {
+        'success': True,
+        'message': 'Clauses extracted successfully',
+        'document': {
+            'id': document_id,
+            'filename': unique_filename,
+            'original_filename': document_name,
+            'upload_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'source_type': 'text',  # Indicate this is from text input
+            'clauses': extracted_clauses,
+            'clauses_summary': clauses_summary,
+            'text_preview': text_preview,
+            'text_length': len(text)
+        }
+    }
+    
+    return jsonify(response_data), 200
+
+
 # =============================================================================
 # DOCUMENT MANAGEMENT ROUTES
 # =============================================================================
@@ -1410,8 +1636,9 @@ def create_clauses_summary(clauses):
     a summary showing the count of clauses in each category.
     
     Args:
-        clauses (dict): The full clauses dictionary from the database
-                       Format: {"Category": ["clause1", "clause2"], ...}
+        clauses (dict or str): The full clauses dictionary from the database
+                              Can be a dict or JSON string
+                              Format: {"Category": ["clause1", "clause2"], ...}
     
     Returns:
         dict: Summary with structure:
@@ -1436,6 +1663,16 @@ def create_clauses_summary(clauses):
             'total_clauses': 0,
             'categories': {}
         }
+    
+    # Parse JSON string if needed (clauses are stored as JSON in database)
+    if isinstance(clauses, str):
+        try:
+            clauses = json.loads(clauses)
+        except (json.JSONDecodeError, TypeError):
+            return {
+                'total_clauses': 0,
+                'categories': {}
+            }
     
     # Count clauses in each category
     categories = {}
@@ -1657,6 +1894,14 @@ def get_document_detail(document_id):
     # Create clauses summary
     clauses_summary = create_clauses_summary(document.get('clauses'))
     
+    # Parse clauses JSON if it's a string
+    clauses = document.get('clauses', {})
+    if isinstance(clauses, str):
+        try:
+            clauses = json.loads(clauses)
+        except (json.JSONDecodeError, TypeError):
+            clauses = {}
+    
     print(f"→ Document detail retrieved: ID={document_id}, User={user_id}")
     
     return jsonify({
@@ -1667,7 +1912,7 @@ def get_document_detail(document_id):
             'original_filename': document['original_filename'],
             'upload_date': document['upload_date'],
             'extracted_text': document.get('extracted_text', ''),
-            'clauses': document.get('clauses', {}),
+            'clauses': clauses,
             'clauses_summary': clauses_summary
         }
     }), 200
