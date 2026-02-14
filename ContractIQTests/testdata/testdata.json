@@ -1,0 +1,40 @@
+{
+  "testUsers": [
+    {
+      "username": "testclient1",
+      "email": "testclient1@test.com",
+      "password": "Test@1234",
+      "role": "client"
+    },
+    {
+      "username": "testlawyer1",
+      "email": "testlawyer1@test.com",
+      "password": "Test@1234",
+      "role": "lawyer"
+    },
+    {
+      "username": "testadmin1",
+      "email": "testadmin1@test.com",
+      "password": "Test@1234",
+      "role": "admin"
+    }
+  ],
+  "sampleContracts": [
+    {
+      "name": "Service Agreement",
+      "text": "This Service Agreement is entered into between the parties. TERMINATION: Either party may terminate this agreement with 30 days written notice. PAYMENT TERMS: Client agrees to pay all invoices within 30 days. CONFIDENTIALITY: Both parties agree to maintain confidentiality."
+    },
+    {
+      "name": "Employment Contract",
+      "text": "This Employment Contract outlines the terms of employment. LIABILITY: The employee shall be liable for any damages caused by negligence. INTELLECTUAL PROPERTY: All work created during employment belongs to the company. PAYMENT: Salary will be paid on the 15th of each month."
+    }
+  ],
+  "invalidPasswords": [
+    "short",
+    "nouppercase1!",
+    "NOLOWERCASE1!",
+    "NoNumbers!",
+    "NoSpecialChar1"
+  ],
+  "validPassword": "Test@1234"
+}
