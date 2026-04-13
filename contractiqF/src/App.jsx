@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Documents from './pages/Documents';
 import DocumentDetails from './pages/DocumentDetails';
+import DocumentComparison from './pages/DocumentComparison';
 import Layout from './components/layout/Layout';
 
 const ProtectedRoute = ({ children }) => {
@@ -93,6 +94,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout><DocumentDetails /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/compare"
+        element={
+          <ProtectedRoute>
+            <Layout><DocumentComparison /></Layout>
           </ProtectedRoute>
         }
       />

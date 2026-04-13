@@ -127,6 +127,32 @@ def init_db():
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
         
+        # ---------------------------------------------------------------------
+        # COMPARISONS TABLE
+        # ---------------------------------------------------------------------
+        # Stores clause comparison results between two documents
+        # - id: Unique identifier for each comparison
+        # - user_id: Links to the user who performed the comparison
+        # - document1_id: ID of the first document being compared
+        # - document2_id: ID of the second document being compared
+        # - comparison_result: JSON string containing detailed comparison analysis
+        # - created_at: When the comparison was performed
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS comparisons (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                document1_id TEXT NOT NULL,
+                document2_id TEXT NOT NULL,
+                comparison_result TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Create indexes for comparison queries
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_comparisons_user_id ON comparisons(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_comparisons_docs ON comparisons(document1_id, document2_id)')
+        
         # Commit all changes to the database
         conn.commit()
         print(f"✓ Database initialized successfully at: {DATABASE_PATH}")
@@ -729,6 +755,159 @@ def user_exists(username=None, email=None):
         
     except sqlite3.Error as e:
         print(f"✗ Error checking user existence: {e}")
+        return False
+        
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# CLAUSE COMPARISON FUNCTIONS
+# =============================================================================
+
+def save_comparison(user_id, document1_id, document2_id, comparison_result):
+    """
+    Save a clause comparison result to the database.
+    
+    Args:
+        user_id (int): ID of the user performing comparison
+        document1_id (str): UUID of first document
+        document2_id (str): UUID of second document
+        comparison_result (dict): Comparison result from compare_clauses()
+    
+    Returns:
+        bool: True if saved successfully, False otherwise
+    """
+    conn = get_db_connection()
+    
+    try:
+        comparison_id = str(__import__('uuid').uuid4())
+        
+        conn.execute('''
+            INSERT INTO comparisons 
+            (id, user_id, document1_id, document2_id, comparison_result, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            comparison_id,
+            user_id,
+            document1_id,
+            document2_id,
+            json.dumps(comparison_result),
+            datetime.now().isoformat()
+        ))
+        
+        conn.commit()
+        print(f"✓ Comparison saved: {comparison_id}")
+        return True
+        
+    except sqlite3.Error as e:
+        print(f"✗ Error saving comparison: {e}")
+        return False
+        
+    finally:
+        conn.close()
+
+
+def get_comparison(user_id, document1_id, document2_id):
+    """
+    Get a previously saved comparison between two documents.
+    
+    Args:
+        user_id (int): ID of the user
+        document1_id (str): UUID of first document
+        document2_id (str): UUID of second document
+    
+    Returns:
+        dict: Comparison result or None if not found
+    """
+    conn = get_db_connection()
+    
+    try:
+        cursor = conn.execute('''
+            SELECT comparison_result FROM comparisons
+            WHERE user_id = ? AND document1_id = ? AND document2_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+        ''', (user_id, document1_id, document2_id))
+        
+        row = cursor.fetchone()
+        
+        if row:
+            return json.loads(row['comparison_result'])
+        
+        return None
+        
+    except sqlite3.Error as e:
+        print(f"✗ Error retrieving comparison: {e}")
+        return None
+        
+    finally:
+        conn.close()
+
+
+def get_user_comparisons(user_id, limit=20):
+    """
+    Get all comparisons for a user.
+    
+    Args:
+        user_id (int): ID of the user
+        limit (int): Maximum number of comparisons to retrieve
+    
+    Returns:
+        list: List of comparison records
+    """
+    conn = get_db_connection()
+    
+    try:
+        cursor = conn.execute('''
+            SELECT id, document1_id, document2_id, created_at, comparison_result
+            FROM comparisons
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+        ''', (user_id, limit))
+        
+        rows = cursor.fetchall()
+        
+        comparisons = []
+        for row in rows:
+            comparisons.append({
+                'id': row['id'],
+                'document1_id': row['document1_id'],
+                'document2_id': row['document2_id'],
+                'created_at': row['created_at'],
+                'comparison_result': json.loads(row['comparison_result'])
+            })
+        
+        return comparisons
+        
+    except sqlite3.Error as e:
+        print(f"✗ Error retrieving comparisons: {e}")
+        return []
+        
+    finally:
+        conn.close()
+
+
+def delete_comparison(comparison_id):
+    """
+    Delete a saved comparison.
+    
+    Args:
+        comparison_id (str): UUID of the comparison
+    
+    Returns:
+        bool: True if deleted successfully
+    """
+    conn = get_db_connection()
+    
+    try:
+        conn.execute('DELETE FROM comparisons WHERE id = ?', (comparison_id,))
+        conn.commit()
+        return True
+        
+    except sqlite3.Error as e:
+        print(f"✗ Error deleting comparison: {e}")
         return False
         
     finally:

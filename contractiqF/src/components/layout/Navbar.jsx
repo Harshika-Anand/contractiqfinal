@@ -22,6 +22,9 @@ const Navbar = () => {
                 <Link to="/documents" className="text-gray-700 hover:text-indigo-600 font-medium">
                   Documents
                 </Link>
+                <Link to="/compare" className="text-gray-700 hover:text-indigo-600 font-medium">
+                  Compare
+                </Link>
                 <div className="flex items-center gap-4">
                   <span className="text-gray-600">Hi, {user?.username}</span>
                   <button

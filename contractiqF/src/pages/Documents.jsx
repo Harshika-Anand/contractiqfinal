@@ -18,12 +18,25 @@ const Documents = () => {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file');
+      toast.error('❌ Please upload a PDF file only');
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size must be less than 10MB');
+      toast.error('❌ File size must be less than 10MB');
+      return;
+    }
+
+    // Check if document with same name already exists
+    const documentExists = documents.some(
+      doc => doc.original_filename === file.name
+    );
+
+    if (documentExists) {
+      toast.error(
+        `❌ Document "${file.name}" already exists! Please rename or choose a different file.`
+      );
+      e.target.value = ''; // Clear the input
       return;
     }
 
@@ -47,12 +60,12 @@ const Documents = () => {
     e.preventDefault();
 
     if (!textInput.trim()) {
-      toast.error('Please paste some text to analyze');
+      toast.error('❌ Please paste some text to analyze');
       return;
     }
 
     if (textInput.trim().length < 50) {
-      toast.error('Text must be at least 50 characters long');
+      toast.error('❌ Text must be at least 50 characters long');
       return;
     }
 
@@ -74,7 +87,7 @@ const Documents = () => {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Clauses extracted successfully!');
+        toast.success('✅ Clauses extracted successfully!');
         setTextInput('');
         setDocumentName('');
         // Refresh documents list
@@ -83,7 +96,7 @@ const Documents = () => {
         toast.error(data.error || 'Failed to extract clauses');
       }
     } catch (error) {
-      toast.error('An error occurred. Please try again.');
+      toast.error('❌ An error occurred. Please try again.');
       console.error('Error:', error);
     } finally {
       setExtracting(false);

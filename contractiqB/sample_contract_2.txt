@@ -1,0 +1,33 @@
+SERVICE AGREEMENT - Contract B
+
+This Service Agreement ("Agreement") is made and entered into as of January 15, 2025, by and between TechCorp Solutions Inc. ("Service Provider") and Global Industries Ltd. ("Client").
+
+1. SCOPE OF SERVICES
+The Service Provider shall provide comprehensive software development services including software engineering, system design, implementation, quality assurance testing, and deliverable deployment. Additional services may be provided as mutually agreed upon.
+
+2. COMPENSATION AND PAYMENT SCHEDULE
+The Client agrees to compensate the Service Provider with a fixed monthly fee of $8,500 for services rendered. Invoices will be submitted monthly and payment is expected within thirty (30) calendar days of invoice date. Payments made after thirty days will be subject to a late fee of 5% monthly. Should the Client's account become sixty (60) days overdue, the Service Provider may suspend all services.
+
+3. CONFIDENTIALITY AND NON-DISCLOSURE
+Both parties commit to maintaining complete confidentiality regarding all proprietary information, technical data, business information, and trade secrets disclosed during this engagement. No party may share confidential information with external parties without explicit written authorization from the other party. Confidentiality obligations shall extend for three (3) years following agreement termination.
+
+4. TERMINATION FOR CONVENIENCE AND CAUSE
+Each party has the right to terminate this agreement by providing written notice of thirty (30) days. The Client may terminate without specifying cause. Either party may terminate immediately for material breach that remains uncured for fourteen (14) days after written notice. The Client shall be responsible for payment of all work completed through the effective termination date.
+
+5. LIMITATION OF LIABILITY AND INDEMNITY
+Neither party shall be held liable for indirect damages, lost profits, punitive damages, or consequential damages arising from this agreement. The Service Provider's maximum liability shall be capped at the total fees paid over the preceding twelve (12) months. The Client shall indemnify and hold harmless the Service Provider from any claims, lawsuits, or damages arising from the Client's applications or use of deliverables.
+
+6. AGREEMENT DURATION
+The initial term of this agreement is twelve (12) months from the commencement date. Following the initial term, this agreement shall automatically extend in additional one-year increments unless written notice of termination is provided by either party at least sixty (60) days before the renewal date.
+
+7. INTELLECTUAL PROPERTY OWNERSHIP
+All work product developed specifically for the Client under this agreement, including source code and documentation, shall become the Client's exclusive property once all compensation has been received in full. The Service Provider may continue to use methodologies, tools, templates, and general knowledge developed in the course of providing services. Any pre-existing or third-party intellectual property shall remain with its original owner.
+
+8. MUTUAL REPRESENTATIONS AND WARRANTIES
+Each party represents that it has full legal capacity and authority to execute this agreement. The Service Provider guarantees that all work will be completed in a professional, skilled, and timely manner according to industry standards. Warranties are limited to the services as described.
+
+9. PROFESSIONAL LIABILITY COVERAGE
+The Service Provider covenants to maintain professional liability insurance throughout the term with a minimum of $1,000,000 per claim.
+
+10. APPLICABLE LAW AND JURISDICTION
+This Agreement shall be interpreted and enforced under the laws of the State of California, excluding choice of law rules.

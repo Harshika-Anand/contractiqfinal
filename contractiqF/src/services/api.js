@@ -99,4 +99,20 @@ export const dashboardAPI = {
   },
 };
 
+export const comparisonAPI = {
+  /**
+   * Compare clauses between two documents
+   * @param {number} document1Id - ID of first document
+   * @param {number} document2Id - ID of second document
+   * @returns {Promise} Comparison result with matching, different, and missing clauses
+   */
+  compare: async (document1Id, document2Id) => {
+    const response = await api.post('/api/compare', {
+      document1_id: document1Id,
+      document2_id: document2Id,
+    });
+    return response.data;
+  },
+};
+
 export default api;

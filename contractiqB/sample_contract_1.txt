@@ -1,0 +1,33 @@
+SERVICE AGREEMENT - Contract A
+
+This Service Agreement ("Agreement") is entered into as of January 1, 2025, between TechCorp Solutions Inc. ("Service Provider") and Global Industries Ltd. ("Client").
+
+1. SERVICES DESCRIPTION
+The Service Provider agrees to provide software development and consulting services as requested by the Client. Services include requirements analysis, design, development, testing, and deployment of custom software solutions.
+
+2. PAYMENT TERMS
+The Client shall pay a monthly fee of $8,500 for the services rendered. All invoices are due within thirty (30) days of receipt. Late payment of more than 15 days shall incur a penalty of 5% per month. The Service Provider reserves the right to suspend services if payment is more than 30 days overdue.
+
+3. CONFIDENTIALITY OBLIGATIONS
+Both parties agree to maintain strict confidentiality of all proprietary information, trade secrets, and business data shared during the course of this agreement. Neither party shall disclose any confidential information to any third party without prior written consent from the other party. This obligation survives termination of the agreement for a period of three (3) years.
+
+4. TERMINATION CLAUSE
+Either party may terminate this agreement with thirty (30) days written notice. The Client may terminate for convenience without cause. The Service Provider may terminate for cause if the Client materially breaches this agreement and fails to cure within fourteen (14) days of written notice. Upon termination, the Client shall pay for all services rendered through the termination date.
+
+5. LIABILITY AND INDEMNIFICATION
+The Service Provider shall not be liable for any indirect, incidental, consequential, special, or punitive damages. The total liability of the Service Provider shall not exceed the fees paid in the previous twelve (12) months. The Client agrees to indemnify and hold harmless the Service Provider against any third-party claims arising from the Client's use of the software or services.
+
+6. TERM AND RENEWAL
+This agreement shall commence on the date first written above and continue for a period of twelve (12) months, unless earlier terminated. The agreement shall automatically renew for additional one-year periods unless either party provides sixty (60) days written notice of non-renewal.
+
+7. INTELLECTUAL PROPERTY RIGHTS
+All custom software, documentation, and deliverables created under this agreement shall be owned by the Client upon full payment of all fees. The Service Provider retains the right to use general methodologies, concepts, and tools developed during the engagement. Pre-existing intellectual property of the Service Provider shall remain the property of the Service Provider.
+
+8. REPRESENTATIONS AND WARRANTIES
+Each party represents and warrants that it has the authority to enter into this agreement. The Service Provider warrants that services will be performed in a professional and competent manner. All warranties are provided "as is" as of the date of delivery.
+
+9. INSURANCE
+The Service Provider shall maintain professional liability insurance with minimum coverage of $1,000,000 per occurrence.
+
+10. GOVERNING LAW
+This agreement shall be governed by the laws of the State of California without regard to its conflict of law principles.

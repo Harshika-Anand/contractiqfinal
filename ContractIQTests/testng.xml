@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="ContractIQ Test Suite" verbose="2" parallel="false">
+    
+    <!-- Home Page Tests -->
+    <test name="Home Page Tests">
+        <classes>
+            <class name="tests.HomePageTest" />
+        </classes>
+    </test>
+
+    <!-- Login Page Tests -->
+    <test name="Login Page Tests">
+        <classes>
+            <class name="tests.LoginPageTest" />
+        </classes>
+    </test>
+
+    <!-- Register Page Tests -->
+    <test name="Register Page Tests">
+        <classes>
+            <class name="tests.RegisterPageTest" />
+        </classes>
+    </test>
+
+    <!-- Dashboard Page Tests -->
+    <test name="Dashboard Page Tests">
+        <classes>
+            <class name="tests.DashboardPageTest" />
+        </classes>
+    </test>
+
+    <!-- Documents Page Tests -->
+    <test name="Documents Page Tests">
+        <classes>
+            <class name="tests.DocumentsPageTest" />
+        </classes>
+    </test>
+
+    <!-- Document Comparison Tests -->
+    <test name="Document Comparison Tests">
+        <classes>
+            <class name="tests.DocumentComparisonPageTest" />
+        </classes>
+    </test>
+
+</suite>

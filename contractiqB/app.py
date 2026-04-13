@@ -50,7 +50,11 @@ from database import (
     get_document_by_id,
     delete_document,
     get_dashboard_stats,
-    user_exists
+    user_exists,
+    save_comparison,
+    get_comparison,
+    get_user_comparisons,
+    delete_comparison
 )
 
 # PDF text extraction
@@ -63,7 +67,8 @@ from pdf_processor import (
 from clause_extractor import (
     extract_clauses,
     get_clause_summary,
-    get_available_categories
+    get_available_categories,
+    compare_clauses
 )
 
 
@@ -1916,6 +1921,183 @@ def get_document_detail(document_id):
             'clauses_summary': clauses_summary
         }
     }), 200
+
+
+# =============================================================================
+# CLAUSE COMPARISON ROUTES
+# =============================================================================
+
+@app.route('/api/compare', methods=['POST'])
+def compare_documents():
+    """
+    Compare clauses between two documents.
+    
+    This endpoint analyzes the clauses in two documents and returns
+    a detailed comparison including matching clauses, differences,
+    missing clauses, and risk flags.
+    
+    Authentication:
+        Requires user to be logged in (user_id in session or JWT token).
+    
+    Request Body:
+        {
+            "document1_id": <int>,
+            "document2_id": <int>
+        }
+    
+    Returns:
+        Success (200):
+            {
+                "success": true,
+                "documents": {
+                    "document1": {...},
+                    "document2": {...}
+                },
+                "comparison": {
+                    "matching_categories": ["Termination", "Payment"],
+                    "different_clauses": [
+                        {
+                            "category": "Termination",
+                            "clause_1": "...",
+                            "clause_2": "...",
+                            "similarity": 0.65
+                        }
+                    ],
+                    "only_in_first": {},
+                    "only_in_second": {},
+                    "risk_flags": [
+                        {
+                            "type": "DIFFERENT",
+                            "category": "Liability",
+                            "severity": "HIGH",
+                            "message": "..."
+                        }
+                    ],
+                    "summary": {
+                        "total_categories": 8,
+                        "matching_categories_count": 5,
+                        "different_clauses_count": 2,
+                        "risk_flags_count": 3,
+                        "overall_similarity": 62.5
+                    }
+                }
+            }
+        
+        Error (401): Not authenticated
+        Error (400): Invalid request (missing parameters)
+        Error (404): Document not found
+    """
+    
+    from database import save_comparison, get_comparison
+    from clause_extractor import compare_clauses
+    
+    # -------------------------------------------------------------------------
+    # Step 1: Verify authentication
+    # -------------------------------------------------------------------------
+    
+    user_id = get_current_user_id()
+    
+    if not user_id:
+        return jsonify({
+            'success': False,
+            'error': 'Not authenticated. Please log in or provide a valid access token.'
+        }), 401
+    
+    # -------------------------------------------------------------------------
+    # Step 2: Get request data
+    # -------------------------------------------------------------------------
+    
+    data = request.json or {}
+    document1_id = data.get('document1_id')
+    document2_id = data.get('document2_id')
+    
+    if not document1_id or not document2_id:
+        return jsonify({
+            'success': False,
+            'error': 'Missing required parameters: document1_id and document2_id'
+        }), 400
+    
+    if document1_id == document2_id:
+        return jsonify({
+            'success': False,
+            'error': 'Cannot compare a document with itself'
+        }), 400
+    
+    # -------------------------------------------------------------------------
+    # Step 3: Fetch documents
+    # -------------------------------------------------------------------------
+    
+    document1 = get_document_by_id(document1_id, user_id)
+    document2 = get_document_by_id(document2_id, user_id)
+    
+    if not document1 or not document2:
+        return jsonify({
+            'success': False,
+            'error': 'One or both documents not found or you do not have access.'
+        }), 404
+    
+    # -------------------------------------------------------------------------
+    # Step 4: Parse clauses from documents
+    # -------------------------------------------------------------------------
+    
+    try:
+        # get_document_by_id() already parses JSON, so clauses might be a dict
+        # We need to handle both cases: already-parsed dict or raw JSON string
+        clauses1 = document1.get('clauses', {})
+        clauses2 = document2.get('clauses', {})
+        
+        # If they're strings, parse them
+        if isinstance(clauses1, str):
+            clauses1 = json.loads(clauses1) if clauses1 else {}
+        if isinstance(clauses2, str):
+            clauses2 = json.loads(clauses2) if clauses2 else {}
+            
+    except (json.JSONDecodeError, TypeError):
+        clauses1 = {}
+        clauses2 = {}
+    
+    # -------------------------------------------------------------------------
+    # Step 5: Perform comparison
+    # -------------------------------------------------------------------------
+    
+    comparison_result = compare_clauses(clauses1, clauses2)
+    
+    # -------------------------------------------------------------------------
+    # Step 6: Save comparison to database
+    # -------------------------------------------------------------------------
+    
+    save_comparison(user_id, str(document1_id), str(document2_id), comparison_result)
+    
+    # -------------------------------------------------------------------------
+    # Step 7: Return results
+    # -------------------------------------------------------------------------
+    
+    summary = comparison_result.get('summary', {})
+    print(f"→ Comparison completed: Doc1={document1_id} ({document1['original_filename']}), Doc2={document2_id} ({document2['original_filename']}), User={user_id}")
+    print(f"  Similarity: {summary.get('overall_similarity')}%")
+    print(f"  Matching Categories: {summary.get('matching_categories_count')}")
+    print(f"  Different Clauses: {summary.get('different_clauses_count')}")
+    print(f"  Risk Flags: {summary.get('risk_flags_count')}")
+    
+    response_data = {
+        'success': True,
+        'documents': {
+            'document1': {
+                'id': document1['id'],
+                'filename': document1['original_filename'],
+                'upload_date': document1['upload_date']
+            },
+            'document2': {
+                'id': document2['id'],
+                'filename': document2['original_filename'],
+                'upload_date': document2['upload_date']
+            }
+        },
+        'comparison': comparison_result
+    }
+    
+    print(f"  Response: {response_data}")
+    return jsonify(response_data), 200
 
 
 # =============================================================================

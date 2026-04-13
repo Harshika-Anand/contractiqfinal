@@ -483,6 +483,176 @@ def get_category_keywords(category):
 
 
 # =============================================================================
+# CLAUSE COMPARISON FUNCTIONALITY
+# =============================================================================
+
+def calculate_clause_similarity(clause1, clause2):
+    """
+    Calculate similarity between two clauses using simple text comparison.
+    
+    For production, consider using fuzzy matching or NLP libraries like fuzzywuzzy.
+    
+    Args:
+        clause1 (str): First clause text
+        clause2 (str): Second clause text
+    
+    Returns:
+        float: Similarity score between 0 and 1 (1 = identical, 0 = completely different)
+    """
+    if not clause1 or not clause2:
+        return 0.0
+    
+    # Normalize both clauses
+    norm1 = normalize_text(clause1)
+    norm2 = normalize_text(clause2)
+    
+    # Calculate word-level similarity using intersection/union
+    words1 = set(norm1.split())
+    words2 = set(norm2.split())
+    
+    if not words1 or not words2:
+        return 0.0
+    
+    # Jaccard similarity coefficient
+    intersection = len(words1 & words2)
+    union = len(words1 | words2)
+    
+    similarity = intersection / union if union > 0 else 0.0
+    return round(similarity, 2)
+
+
+def compare_clauses(clauses1, clauses2):
+    """
+    Compare clauses from two documents.
+    
+    Returns:
+    - matching_categories: Categories with clauses in both documents
+    - different_clauses: Clauses that exist in both but have different text
+    - only_in_first: Clauses only present in first document
+    - only_in_second: Clauses only present in second document
+    - risk_flags: High-importance differences to flag
+    
+    Args:
+        clauses1 (dict): Extracted clauses from document 1
+        clauses2 (dict): Extracted clauses from document 2
+    
+    Returns:
+        dict: Comparison results with detailed analysis
+    """
+    if not clauses1 or not clauses2:
+        return {
+            'matching_categories': [],
+            'different_clauses': [],
+            'only_in_first': {},
+            'only_in_second': {},
+            'risk_flags': [],
+            'summary': {
+                'total_categories': len(CLAUSE_KEYWORDS),
+                'matching_categories_count': 0,
+                'different_clauses_count': 0,
+                'missing_in_second_count': 0,
+                'new_in_second_count': 0,
+                'risk_flags_count': 0,
+                'overall_similarity': 0.0
+            }
+        }
+    
+    matching_categories = []
+    different_clauses = []
+    only_in_first = {}
+    only_in_second = {}
+    risk_flags = []
+    
+    # Critical categories that need close attention
+    critical_categories = ['Liability', 'Payment', 'Termination', 'Confidentiality']
+    
+    # Iterate through each category
+    for category in CLAUSE_KEYWORDS.keys():
+        clauses_in_1 = clauses1.get(category, [])
+        clauses_in_2 = clauses2.get(category, [])
+        
+        # Both have clauses in this category
+        if clauses_in_1 and clauses_in_2:
+            matching_categories.append(category)
+            
+            # Check if they're different
+            # Simple comparison: check if first clause text differs significantly
+            if clauses_in_1[0] and clauses_in_2[0]:
+                similarity = calculate_clause_similarity(clauses_in_1[0], clauses_in_2[0])
+                
+                # If similarity is less than 0.7, consider them different
+                if similarity < 0.7:
+                    different_clauses.append({
+                        'category': category,
+                        'clause_1': clauses_in_1[0][:200],  # First 200 chars
+                        'clause_2': clauses_in_2[0][:200],
+                        'similarity': similarity,
+                        'all_from_doc1': clauses_in_1,
+                        'all_from_doc2': clauses_in_2
+                    })
+                    
+                    # Flag if critical category
+                    if category in critical_categories:
+                        risk_flags.append({
+                            'type': 'DIFFERENT',
+                            'category': category,
+                            'severity': 'HIGH' if similarity < 0.5 else 'MEDIUM',
+                            'message': f'{category} clause differs significantly between documents',
+                            'similarity_score': similarity
+                        })
+        
+        # Only in first document
+        elif clauses_in_1 and not clauses_in_2:
+            only_in_first[category] = clauses_in_1
+            
+            # Flag if critical category
+            if category in critical_categories:
+                risk_flags.append({
+                    'type': 'MISSING',
+                    'category': category,
+                    'severity': 'MEDIUM',
+                    'message': f'{category} clause exists in Document 1 but missing in Document 2',
+                    'location': 'second_document'
+                })
+        
+        # Only in second document
+        elif clauses_in_2 and not clauses_in_1:
+            only_in_second[category] = clauses_in_2
+            
+            # Flag if critical category
+            if category in critical_categories:
+                risk_flags.append({
+                    'type': 'NEW',
+                    'category': category,
+                    'severity': 'MEDIUM',
+                    'message': f'{category} clause exists in Document 2 but missing in Document 1',
+                    'location': 'first_document'
+                })
+    
+    # Generate summary
+    summary = {
+        'total_categories': len(CLAUSE_KEYWORDS),
+        'matching_categories_count': len(matching_categories),
+        'different_clauses_count': len(different_clauses),
+        'missing_in_second_count': len(only_in_first),
+        'new_in_second_count': len(only_in_second),
+        'risk_flags_count': len(risk_flags),
+        'overall_similarity': round(
+            (len(matching_categories) / len(CLAUSE_KEYWORDS)) * 100, 1
+        )
+    }
+    
+    return {
+        'matching_categories': matching_categories,
+        'different_clauses': different_clauses,
+        'only_in_first': only_in_first,
+        'only_in_second': only_in_second,
+        'risk_flags': risk_flags,
+        'summary': summary
+    }
+
+
+# =============================================================================
 # MODULE TEST
 # =============================================================================
 

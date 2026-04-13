@@ -7,7 +7,11 @@ import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.AfterMethod;
+import java.util.logging.Logger;
 
+import io.github.bonigarcia.wdm.WebDriverManager;
 import utils.ConfigReader;
 import utils.ScreenshotHelper;
 import utils.WaitHelper;
@@ -17,13 +21,7 @@ import java.time.Duration;
 /**
  * BaseTest - Parent class for all test classes
  * Handles browser setup, teardown, and common functionality
- * 
- * IMPORTANT: Before running tests, download the WebDriver for your browser:
- * - Chrome: https://chromedriver.chromium.org/downloads
- * - Firefox: https://github.com/mozilla/geckodriver/releases
- * - Edge: https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/
- * 
- * Place the driver executable in the 'drivers' folder
+ * Uses TestNG annotations for lifecycle management
  */
 public class BaseTest {
     
@@ -33,9 +31,14 @@ public class BaseTest {
     
     /**
      * Initialize the WebDriver based on configuration
-     * Called before each test
+     * Called before each test method
      */
+    @BeforeMethod
     public void setUp() {
+        // Suppress CDP warnings
+        Logger.getLogger("org.openqa.selenium.devtools.CdpVersionFinder").setLevel(java.util.logging.Level.OFF);
+        Logger.getLogger("org.openqa.selenium.chromium.ChromiumDriver").setLevel(java.util.logging.Level.OFF);
+        
         String browser = ConfigReader.getBrowser().toLowerCase();
         boolean headless = ConfigReader.isHeadless();
         
@@ -73,8 +76,8 @@ public class BaseTest {
      * Setup Chrome browser
      */
     private void setupChrome(boolean headless) {
-        // Set driver path - Update this path based on your driver location
-        System.setProperty("webdriver.chrome.driver", "drivers/chromedriver.exe");
+        // Use WebDriverManager to automatically download the correct ChromeDriver
+        WebDriverManager.chromedriver().setup();
         
         ChromeOptions options = new ChromeOptions();
         if (headless) {
@@ -84,6 +87,11 @@ public class BaseTest {
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--start-maximized");
+        options.addArguments("--disable-blink-features=AutomationControlled");
+        options.addArguments("--disable-popup-blocking");
+        options.addArguments("--disable-notifications");
+        options.setExperimentalOption("excludeSwitches", new String[]{"enable-automation"});
+        options.setExperimentalOption("useAutomationExtension", false);
         
         driver = new ChromeDriver(options);
     }
@@ -92,7 +100,8 @@ public class BaseTest {
      * Setup Firefox browser
      */
     private void setupFirefox(boolean headless) {
-        System.setProperty("webdriver.gecko.driver", "drivers/geckodriver.exe");
+        // Use WebDriverManager to automatically download the correct GeckoDriver
+        WebDriverManager.firefoxdriver().setup();
         
         FirefoxOptions options = new FirefoxOptions();
         if (headless) {
@@ -106,7 +115,8 @@ public class BaseTest {
      * Setup Edge browser
      */
     private void setupEdge(boolean headless) {
-        System.setProperty("webdriver.edge.driver", "drivers/msedgedriver.exe");
+        // Use WebDriverManager to automatically download the correct Edge WebDriver
+        WebDriverManager.edgedriver().setup();
         
         EdgeOptions options = new EdgeOptions();
         if (headless) {
@@ -118,8 +128,9 @@ public class BaseTest {
     
     /**
      * Cleanup after test
-     * Called after each test
+     * Called after each test method
      */
+    @AfterMethod
     public void tearDown() {
         try {
             if (driver != null) {
