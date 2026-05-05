@@ -14,3 +14,9 @@ Werkzeug==3.0.1
 
 # JWT authentication for access tokens
 PyJWT==2.8.0
+
+# PDF creation for test setup
+reportlab==4.0.9
+
+# HTTP requests for API testing and setup
+requests==2.31.0

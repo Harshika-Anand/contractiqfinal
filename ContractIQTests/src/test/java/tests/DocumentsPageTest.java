@@ -29,7 +29,9 @@ public class DocumentsPageTest extends BaseTest {
         String password = TestDataGenerator.getValidTestPassword();
         
         DashboardPage dashboard = registerPage.register(username, email, "client", password);
+        sleep(1500); // Wait for redirect to complete
         documentsPage = dashboard.goToDocuments();
+        sleep(1000); // Wait for documents page to load
     }
     
     @AfterMethod

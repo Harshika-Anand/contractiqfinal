@@ -35,7 +35,6 @@ public class DashboardPageTest extends BaseTest {
     @Override
     public void tearDown() {
         super.tearDown();
-        tearDown();
     }
     
     // ==================== TEST CASES ====================
